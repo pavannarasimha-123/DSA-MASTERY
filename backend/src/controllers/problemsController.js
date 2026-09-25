@@ -217,6 +217,76 @@ private boolean allUnique(String s, int start, int end) {
   ];
 }
 
+function inferProblemSignature(prob) {
+  const name = prob.name.toLowerCase();
+  const desc = (prob.shortDescription || "").toLowerCase();
+  const ds = (prob.dataStructure || "").toLowerCase();
+
+  const words = prob.name.replace(/[^a-zA-Z0-9 ]/g, "").split(/\s+/).filter(Boolean);
+  let methodName = "solve";
+  if (words.length > 0) {
+    methodName = words[0].toLowerCase() + words.slice(1, 3).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join("");
+  }
+
+  let returnType = "int";
+  let paramTypes = ["int[]"];
+  let paramNames = ["nums"];
+  let defaultReturn = "0";
+
+  if (name.startsWith("is ") || name.startsWith("has ") || name.includes("valid") || name.includes("palindrome") || name.includes("same tree") || name.includes("symmetric") || name.includes("cycle")) {
+    returnType = "boolean";
+    defaultReturn = "false";
+  } else if (name.includes("two sum") || name.includes("search range") || name.includes("sort colors")) {
+    returnType = "int[]";
+    defaultReturn = "new int[]{}";
+  } else if (name.includes("3sum") || name.includes("combination sum") || name.includes("permutations") || name.includes("subsets")) {
+    returnType = "List<List<Integer>>";
+    defaultReturn = "new ArrayList<>()";
+  } else if (name.includes("longest substring") || name.includes("longest common prefix") || name.includes("reverse words")) {
+    if (name.includes("length") || name.includes("longest substring without")) {
+      returnType = "int";
+      defaultReturn = "0";
+    } else {
+      returnType = "String";
+      defaultReturn = "\"\"";
+    }
+  }
+
+  if (ds === "string" || name.includes("string") || name.includes("anagram") || name.includes("parentheses") || name.includes("palindrome") || desc.includes("given a string")) {
+    if (name.includes("anagram") || desc.includes("two strings") || name.includes("isomorphic")) {
+      paramTypes = ["String", "String"];
+      paramNames = ["s", "t"];
+    } else {
+      paramTypes = ["String"];
+      paramNames = ["s"];
+    }
+  } else if (ds === "matrix" || name.includes("matrix") || name.includes("grid")) {
+    paramTypes = ["int[][]"];
+    paramNames = ["matrix"];
+  } else {
+    if (name.includes("target") || desc.includes("target") || name.includes("search") || name.includes("sum")) {
+      paramTypes = ["int[]", "int"];
+      paramNames = ["nums", "target"];
+    } else if (name.includes("kth") || desc.includes("k ") || name.includes("at most k") || desc.includes("size k")) {
+      paramTypes = ["int[]", "int"];
+      paramNames = ["nums", "k"];
+    } else {
+      paramTypes = ["int[]"];
+      paramNames = ["nums"];
+    }
+  }
+
+  const paramsStr = paramTypes.map((type, i) => `${type} ${paramNames[i]}`).join(", ");
+  const starterCode = `class Solution {\n    public ${returnType} ${methodName}(${paramsStr}) {\n        // Apply ${prob.pattern} algorithmic pattern\n        \n        return ${defaultReturn};\n    }\n}`;
+
+  return {
+    methodMeta: { methodName, returnType, paramTypes },
+    starterCode,
+    paramNames,
+    paramTypes
+  };
+}
+
 // 1. Add rich interactive problems
 for (const p of PROBLEMS_DATA) {
   const approaches = buildThreeApproaches(p);
@@ -229,6 +299,12 @@ for (const pattern of PATTERNS_DATA) {
     const slug = prob.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     if (!catalogMap.has(slug)) {
       const approaches = buildThreeApproaches(prob);
+      const signature = inferProblemSignature(prob);
+      const testInput = signature.paramNames.length === 2 && signature.paramNames[1] === "target"
+        ? [[2, 7, 11, 15], 9]
+        : (signature.paramTypes[0] === "String" ? ["racecar"] : [1, 2, 3, 4]);
+      const testExpected = signature.methodMeta.returnType === "boolean" ? true : (signature.methodMeta.returnType === "int[]" ? [0, 1] : 0);
+
       catalogMap.set(slug, {
         id: prob.id,
         slug,
@@ -240,25 +316,26 @@ for (const pattern of PATTERNS_DATA) {
         companies: ["Top Tech", "FAANG"],
         leetcodeUrl: prob.leetcodeUrl,
         gfgUrl: prob.gfgUrl,
-        description: `${prob.shortDescription}\n\nThis question frequently tests the ${prob.pattern} algorithmic pattern. Practice and master the implementation in Java.`,
-        constraints: ["1 <= n <= 10^5", "Standard interview bounds apply."],
+        description: `${prob.shortDescription}\n\n### Task\nGiven the inputs described above, solve the problem by applying the **${prob.pattern}** pattern in Java.\n\n### Requirements\n- Analyze the problem constraints.\n- Implement an optimal solution avoiding redundant computations.\n- Verify boundary cases and edge conditions.`,
+        constraints: [
+          `Expected Time Complexity: ${prob.expectedTime}`,
+          `Expected Space Complexity: ${prob.expectedSpace}`,
+          "1 <= n <= 10^5",
+          "Standard interview bounds apply."
+        ],
         examples: [
           {
-            input: "Sample standard input conforming to problem constraints",
-            output: "Target result",
-            explanation: `Solved using ${prob.pattern} in ${prob.expectedTime}.`
+            input: signature.paramNames.length === 2 ? `${signature.paramNames[0]} = [2, 7, 11, 15], ${signature.paramNames[1]} = 9` : `${signature.paramNames[0]} = [1, 2, 3, 4]`,
+            output: signature.methodMeta.returnType === "boolean" ? "true" : (signature.methodMeta.returnType === "int[]" ? "[0, 1]" : "Target Value"),
+            explanation: `Solved optimally using the ${prob.pattern} pattern in ${prob.expectedTime} runtime.`
           }
         ],
-        methodMeta: {
-          methodName: "solve",
-          returnType: "int",
-          paramTypes: ["int[]"]
-        },
-        starterCode: `class Solution {\n    public int solve(int[] nums) {\n        // Apply ${prob.pattern} pattern here\n        \n        return 0;\n    }\n}`,
-        solution: `class Solution {\n    public int solve(int[] nums) {\n        // Master implementation\n        return 0;\n    }\n}`,
+        methodMeta: signature.methodMeta,
+        starterCode: signature.starterCode,
+        solution: signature.starterCode,
         hints: [
           `Hint 1: This problem is categorized under the ${prob.pattern} pattern.`,
-          `Hint 2: Pay attention to edge cases like empty inputs, boundary bounds, or extreme integer ranges.`,
+          `Hint 2: Pay attention to edge cases like empty inputs, boundary bounds, or extreme ranges.`,
           `Hint 3: Expected time complexity is ${prob.expectedTime}, space complexity is ${prob.expectedSpace}.`
         ],
         approaches,
@@ -268,9 +345,9 @@ for (const pattern of PATTERNS_DATA) {
           { step: 3, title: "Complexity", text: `Target Time: ${prob.expectedTime}, Space: ${prob.expectedSpace}` }
         ],
         testCases: [
-          { input: [1, 2, 3], expected: 0, isHidden: false }
+          { input: testInput, expected: testExpected, isHidden: false }
         ],
-        isInteractive: false
+        isInteractive: true
       });
     }
   }

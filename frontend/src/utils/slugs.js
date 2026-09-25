@@ -1,0 +1,66 @@
+export const PATTERN_SLUG_MAP = {
+  "two pointers": "two-pointers",
+  "sliding window": "sliding-window",
+  "prefix sum": "prefix-sum",
+  "difference array": "difference-array",
+  "fast and slow pointers": "fast-and-slow-pointers",
+  "fast & slow pointers": "fast-and-slow-pointers",
+  "binary search": "binary-search",
+  "binary search on answer": "binary-search-on-answer",
+  "hashing / frequency map": "hashing-frequency-map",
+  "hashing": "hashing-frequency-map",
+  "frequency counting": "hashing-frequency-map",
+  "frequency map": "hashing-frequency-map",
+  "monotonic stack": "monotonic-stack",
+  "monotonic queue": "monotonic-queue",
+  "heap / top k": "heap-top-k",
+  "heap": "heap-top-k",
+  "heaps": "heap-top-k",
+  "top k": "heap-top-k",
+  "top k elements": "heap-top-k",
+  "merge intervals": "merge-intervals",
+  "greedy algorithms": "greedy",
+  "greedy": "greedy",
+  "backtracking": "backtracking",
+  "divide and conquer": "divide-and-conquer",
+  "recursion": "recursion",
+  "tree recursion": "recursion",
+  "breadth-first search (bfs)": "bfs",
+  "breadth-first search": "bfs",
+  "bfs": "bfs",
+  "depth-first search (dfs)": "dfs",
+  "depth-first search": "dfs",
+  "dfs": "dfs",
+  "grid bfs/dfs": "bfs",
+  "multi-source bfs": "multi-source-bfs",
+  "topological sort": "topological-sort",
+  "topological sort (kahn's)": "topological-sort",
+  "union find / disjoint set union": "union-find",
+  "union find": "union-find",
+  "union-find": "union-find",
+  "dsu": "union-find",
+  "trie (prefix tree)": "trie",
+  "trie": "trie",
+  "dynamic programming (1d)": "dynamic-programming-1d",
+  "dynamic programming (2d)": "dynamic-programming-2d",
+  "dp": "dynamic-programming-1d",
+  "bit manipulation": "bit-manipulation",
+  "bitmasking (subset state dp)": "bitmasking",
+  "bitmasking": "bitmasking",
+  "matrix traversal": "matrix-traversal",
+  "kadane's algorithm": "kadanes-algorithm",
+  "kadanes algorithm": "kadanes-algorithm",
+  "sweep line": "sweep-line",
+  "fast exponentiation / math": "fast-exponentiation",
+  "fast exponentiation": "fast-exponentiation",
+  "math": "fast-exponentiation"
+};
+
+export function getPatternSlug(name) {
+  if (!name) return "two-pointers";
+  const normalized = name.toLowerCase().trim();
+  if (PATTERN_SLUG_MAP[normalized]) {
+    return PATTERN_SLUG_MAP[normalized];
+  }
+  return normalized.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}

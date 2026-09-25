@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../services/api";
 import { ArrowRight, Layers, Database, Code2 } from "lucide-react";
+import { getPatternSlug } from "../utils/slugs";
 
 export default function DataStructures() {
   const [dataStructures, setDataStructures] = useState([]);
@@ -46,9 +47,13 @@ export default function DataStructures() {
             <div className="space-y-3 pt-2 border-t border-slate-100">
               <div className="flex flex-wrap gap-1.5">
                 {ds.commonPatterns?.map(p => (
-                  <span key={p} className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">
-                    {p}
-                  </span>
+                  <Link
+                    key={p}
+                    to={`/patterns/${getPatternSlug(p)}`}
+                    className="px-2 py-0.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 text-slate-700 text-[10px] font-medium transition-colors"
+                  >
+                    {p} →
+                  </Link>
                 ))}
               </div>
 

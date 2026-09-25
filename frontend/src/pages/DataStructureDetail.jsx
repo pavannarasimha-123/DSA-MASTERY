@@ -5,6 +5,7 @@ import {
   ArrowLeft, Code2, Clock, CheckCircle, Eye, BookOpen,
   Layers, StepForward, RotateCcw, Cpu, ExternalLink, Search
 } from "lucide-react";
+import { getPatternSlug } from "../utils/slugs";
 
 export default function DataStructureDetail() {
   const { slug } = useParams();
@@ -351,10 +352,10 @@ export default function DataStructureDetail() {
             {ds.commonPatterns?.map(p => (
               <Link
                 key={p}
-                to={`/patterns`}
-                className="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-colors"
+                to={`/patterns/${getPatternSlug(p)}`}
+                className="px-2.5 py-1 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-transparent hover:border-blue-200 text-slate-800 text-xs font-medium transition-colors"
               >
-                {p}
+                {p} →
               </Link>
             ))}
           </div>
