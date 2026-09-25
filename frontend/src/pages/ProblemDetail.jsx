@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import API from "../services/api";
 import MonacoEditorWrapper from "../components/MonacoEditorWrapper";
@@ -6,7 +6,8 @@ import DifficultyBadge from "../components/DifficultyBadge";
 import { useAuth } from "../context/AuthContext";
 import {
   ExternalLink, CheckCircle2, XCircle, AlertTriangle, Lightbulb,
-  ArrowRight, Sparkles, Code2, Clock, Cpu, Check, Layers
+  ArrowRight, Sparkles, Code2, Clock, Cpu, Check, Layers,
+  Copy, ArrowUpRight, BookOpen
 } from "lucide-react";
 
 export default function ProblemDetail() {
@@ -20,8 +21,10 @@ export default function ProblemDetail() {
   // Execution state
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeTab, setActiveTab] = useState("tests"); // 'tests' | 'results' | 'analysis' | 'recommendations'
+  const [activeTab, setActiveTab] = useState("tests"); // 'tests' | 'results' | 'analysis' | 'approaches'
   const [executionResult, setExecutionResult] = useState(null);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [copiedIdx, setCopiedIdx] = useState(null);
 
   // Left sidebar tabs
   const [leftTab, setLeftTab] = useState("description"); // 'description' | 'approaches' | 'hints' | 'stepbystep'
@@ -63,6 +66,7 @@ export default function ProblemDetail() {
     if (!problem) return;
     setIsSubmitting(true);
     setActiveTab("results");
+    setHasSubmitted(true);
     try {
       const res = await API.post("/execute/submit", {
         slug: problem.slug,
@@ -90,6 +94,18 @@ export default function ProblemDetail() {
     }
   }
 
+  function handleLoadApproach(approachCode) {
+    if (window.confirm("Load this approach into the code editor? This will overwrite your current code.")) {
+      setCode(approachCode);
+    }
+  }
+
+  function handleCopyApproach(approachCode, idx) {
+    navigator.clipboard.writeText(approachCode);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  }
+
   if (loading) {
     return <div className="max-w-7xl mx-auto px-4 py-12 text-center text-slate-500 text-sm">Loading problem workspace...</div>;
   }
@@ -102,6 +118,8 @@ export default function ProblemDetail() {
       </div>
     );
   }
+
+  const approaches = problem.approaches || [];
 
   return (
     <div className="max-w-[1700px] mx-auto px-2 sm:px-4 py-4 space-y-3">
@@ -138,7 +156,7 @@ export default function ProblemDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 min-h-[calc(100vh-160px)]">
         {/* LEFT COLUMN: Problem Statement, Approaches, Hints (Span 4) */}
         <div className="lg:col-span-4 flex flex-col border border-slate-200 rounded bg-white overflow-hidden max-h-[820px]">
-          {/* Tabs */}
+          {/* Left Tabs */}
           <div className="flex items-center border-b border-slate-200 bg-slate-50 text-xs font-medium">
             <button
               onClick={() => setLeftTab("description")}
@@ -150,11 +168,11 @@ export default function ProblemDetail() {
             </button>
             <button
               onClick={() => setLeftTab("approaches")}
-              className={`flex-1 py-2 text-center transition-colors ${
+              className={`flex-1 py-2 text-center transition-colors relative ${
                 leftTab === "approaches" ? "bg-white text-slate-900 font-bold border-b-2 border-blue-600" : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              Approaches
+              Approaches ({approaches.length})
             </button>
             <button
               onClick={() => setLeftTab("hints")}
@@ -222,37 +240,85 @@ export default function ProblemDetail() {
               </div>
             )}
 
+            {/* TAB: APPROACHES IN LEFT COLUMN */}
             {leftTab === "approaches" && (
               <div className="space-y-4">
-                <div className="text-slate-600">
-                  Study multiple approaches from Brute Force to Optimal to develop problem-solving intuition.
+                <div className="p-2.5 rounded bg-slate-50 border border-slate-200 text-slate-700 leading-relaxed text-xs">
+                  Study all different approaches from Brute Force to Optimal. Click <strong>"Load in Editor"</strong> on any approach to execute it in the sandbox.
                 </div>
 
-                {problem.approaches?.map((app, idx) => (
-                  <div key={idx} className="p-3 rounded border border-slate-200 bg-slate-50 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-slate-900">{app.name}</span>
+                {/* Approaches Comparison Summary */}
+                <div className="border border-slate-200 rounded overflow-hidden">
+                  <table className="w-full text-left text-[11px] font-mono">
+                    <thead className="bg-slate-100 text-slate-600">
+                      <tr>
+                        <th className="p-2">Approach</th>
+                        <th className="p-2">Time</th>
+                        <th className="p-2">Space</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {approaches.map((app, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50 font-sans">
+                          <td className="p-2 font-medium text-slate-800">{app.name}</td>
+                          <td className="p-2 font-mono text-blue-700">{app.timeComplexity}</td>
+                          <td className="p-2 font-mono text-slate-600">{app.spaceComplexity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Detailed Cards for Each Approach */}
+                {approaches.map((app, idx) => (
+                  <div key={idx} className="p-3.5 rounded border border-slate-200 bg-white space-y-2.5">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 border-b border-slate-100 pb-2">
+                      <span className="font-bold text-slate-900 text-xs">{app.name}</span>
                       <div className="text-[11px] font-mono text-slate-500">
-                        <span>Time: {app.timeComplexity}</span> • <span>Space: {app.spaceComplexity}</span>
+                        <span className="text-blue-700 font-semibold">{app.timeComplexity}</span> • <span>{app.spaceComplexity}</span>
                       </div>
                     </div>
-                    <p className="text-slate-700 leading-relaxed">{app.explanation}</p>
+
+                    <p className="text-slate-700 leading-relaxed text-xs">{app.explanation}</p>
+
                     {app.whyBetter && (
                       <div className="p-2 rounded bg-blue-50 border border-blue-200 text-blue-900 text-[11px]">
                         <strong>Why is this optimal? </strong>{app.whyBetter}
                       </div>
                     )}
-                    <pre className="p-2.5 rounded bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
-                      <code>{app.code}</code>
-                    </pre>
+
+                    <div className="relative">
+                      <pre className="p-2.5 rounded bg-slate-900 text-slate-100 font-mono text-[11px] overflow-x-auto">
+                        <code>{app.code}</code>
+                      </pre>
+
+                      <div className="flex items-center space-x-2 mt-2">
+                        <button
+                          onClick={() => handleLoadApproach(app.code)}
+                          className="px-2.5 py-1 rounded bg-slate-900 hover:bg-slate-800 text-white font-medium text-[11px] inline-flex items-center space-x-1"
+                        >
+                          <Code2 className="w-3 h-3" />
+                          <span>Load in Editor</span>
+                        </button>
+
+                        <button
+                          onClick={() => handleCopyApproach(app.code, idx)}
+                          className="px-2.5 py-1 rounded border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-[11px] inline-flex items-center space-x-1"
+                        >
+                          {copiedIdx === idx ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3 text-slate-500" />}
+                          <span>{copiedIdx === idx ? "Copied" : "Copy Code"}</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
+            {/* TAB: PROGRESSIVE HINTS */}
             {leftTab === "hints" && (
               <div className="space-y-3">
-                <p className="text-slate-600">Reveal hints progressively without immediately viewing the answer.</p>
+                <p className="text-slate-600">Reveal progressive hints step-by-step to test your pattern intuition.</p>
                 {problem.hints?.map((hint, idx) => (
                   <div key={idx} className="p-3 rounded border border-slate-200 bg-white space-y-2">
                     <div className="flex justify-between items-center">
@@ -316,7 +382,7 @@ export default function ProblemDetail() {
           />
         </div>
 
-        {/* RIGHT COLUMN: Test Cases, Results, Complexity Analysis & Collection Recommendations (Span 3) */}
+        {/* RIGHT COLUMN: Test Cases, Results, Complexity Analysis & Approaches (Span 3) */}
         <div className="lg:col-span-3 flex flex-col border border-slate-200 rounded bg-white overflow-hidden max-h-[820px]">
           {/* Right Header Tabs */}
           <div className="flex items-center border-b border-slate-200 bg-slate-50 text-xs font-medium">
@@ -335,6 +401,15 @@ export default function ProblemDetail() {
               }`}
             >
               Output & Status
+            </button>
+            <button
+              onClick={() => setActiveTab("approaches")}
+              className={`flex-1 py-2 text-center transition-colors relative ${
+                activeTab === "approaches" ? "bg-white text-slate-900 font-bold border-b-2 border-blue-600" : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Approaches ({approaches.length})
+              {hasSubmitted && <span className="w-1.5 h-1.5 rounded-full bg-blue-600 absolute top-1.5 right-1.5"></span>}
             </button>
             <button
               onClick={() => setActiveTab("analysis")}
@@ -364,7 +439,7 @@ export default function ProblemDetail() {
               </div>
             )}
 
-            {/* TAB: EXECUTION RESULTS */}
+            {/* TAB: EXECUTION RESULTS & PROMINENT APPROACHES CALLOUT */}
             {activeTab === "results" && (
               <div className="space-y-3">
                 {isRunning || isSubmitting ? (
@@ -392,6 +467,39 @@ export default function ProblemDetail() {
                       <span className="font-mono">
                         {executionResult.passedCount} / {executionResult.totalCount} Passed
                       </span>
+                    </div>
+
+                    {/* SUBMISSION CALLOUT: LIST OF ALL DIFFERENT APPROACHES */}
+                    <div className="p-3 rounded border border-blue-200 bg-blue-50/70 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-xs text-blue-900 flex items-center space-x-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                          <span>All Different Approaches ({approaches.length})</span>
+                        </span>
+                        <button
+                          onClick={() => setActiveTab("approaches")}
+                          className="text-[11px] font-semibold text-blue-700 hover:text-blue-900 underline inline-flex items-center space-x-0.5"
+                        >
+                          <span>Compare All</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Compare your code against Brute Force, Better, and Optimal solutions.
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {approaches.map((app, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setActiveTab("approaches");
+                            }}
+                            className="px-2 py-0.5 rounded bg-white border border-blue-200 text-blue-800 hover:bg-blue-100 text-[10px] font-medium"
+                          >
+                            {app.name.split(":")[0]} ({app.timeComplexity})
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Metrics */}
@@ -433,6 +541,52 @@ export default function ProblemDetail() {
                     Click "Run Code" or "Submit Solution" to inspect results.
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* TAB: ALL APPROACHES IN RIGHT COLUMN */}
+            {activeTab === "approaches" && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-xs text-slate-900">List of All Approaches</span>
+                  <span className="text-[10px] font-mono text-slate-500">{approaches.length} Solutions Available</span>
+                </div>
+
+                {approaches.map((app, idx) => (
+                  <div key={idx} className="p-3 rounded border border-slate-200 bg-slate-50 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-slate-900 text-xs">{app.name}</span>
+                      <span className="text-[10px] font-mono text-blue-700 font-semibold">{app.timeComplexity}</span>
+                    </div>
+
+                    <p className="text-slate-600 text-[11px] leading-relaxed">{app.explanation}</p>
+
+                    {app.whyBetter && (
+                      <div className="p-1.5 rounded bg-blue-50 border border-blue-200 text-blue-900 text-[10px]">
+                        <strong>Why optimal: </strong>{app.whyBetter}
+                      </div>
+                    )}
+
+                    <pre className="p-2 rounded bg-slate-900 text-slate-100 font-mono text-[10px] overflow-x-auto max-h-36">
+                      <code>{app.code}</code>
+                    </pre>
+
+                    <div className="flex items-center space-x-2 pt-1">
+                      <button
+                        onClick={() => handleLoadApproach(app.code)}
+                        className="px-2 py-0.5 rounded bg-slate-900 text-white text-[10px] font-medium hover:bg-slate-800"
+                      >
+                        Load into Editor
+                      </button>
+                      <button
+                        onClick={() => handleCopyApproach(app.code, idx)}
+                        className="px-2 py-0.5 rounded border border-slate-300 text-slate-700 text-[10px] font-medium hover:bg-white"
+                      >
+                        {copiedIdx === idx ? "Copied!" : "Copy Code"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 

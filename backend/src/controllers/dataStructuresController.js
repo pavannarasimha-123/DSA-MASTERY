@@ -1,4 +1,4 @@
-﻿import { DATA_STRUCTURES } from "../data/dataStructuresData.js";
+import { DATA_STRUCTURES } from "../data/dataStructuresData.js";
 
 export function getDataStructures(req, res) {
   res.json({
@@ -10,6 +10,7 @@ export function getDataStructures(req, res) {
       category: ds.category,
       theorySummary: ds.theory.slice(0, 180) + "...",
       operationsCount: ds.operationsTable.length,
+      methodsCount: ds.methodsList?.length || 0,
       commonPatterns: ds.commonPatterns,
       topProblems: ds.topProblems
     }))
