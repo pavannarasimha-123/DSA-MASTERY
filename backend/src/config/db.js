@@ -1,4 +1,4 @@
-﻿import mongoose from "mongoose";
+import mongoose from "mongoose";
 
 let isConnected = false;
 
@@ -15,7 +15,9 @@ export async function connectDB() {
     console.log("✓ Connected to MongoDB Atlas successfully.");
     return true;
   } catch (err) {
-    console.log(`ℹ MongoDB connection notice: ${err.message}. Operating seamlessly with high-speed in-memory store.`);
+    // Log error without exposing connection string
+    console.log(`ℹ MongoDB connection notice: Database connection failed. Operating with in-memory store.`);
+    console.error("[DB] Connection error (details hidden for security)");
     return false;
   }
 }

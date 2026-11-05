@@ -1,30 +1,117 @@
-﻿import fs from "fs/promises";
+import fs from "fs/promises";
 import path from "path";
 import os from "os";
 import crypto from "crypto";
 import { execFile } from "child_process";
 import util from "util";
+import { fileURLToPath } from "url";
 
 const execFileAsync = util.promisify(execFile);
 
-// Dangerous patterns that violate sandboxing rules
+// Path to Java security policy
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SECURITY_POLICY = path.join(__dirname, "sandbox.policy");
+
+// Comprehensive dangerous patterns that violate sandboxing rules
 const FORBIDDEN_PATTERNS = [
-  /Runtime\.getRuntime\(\)/i,
+  // Process execution
+  /Runtime\s*\.\s*getRuntime/i,
   /ProcessBuilder/i,
-  /System\.exit/i,
-  /java\.lang\.reflect/i,
-  /java\.net\./i,
-  /java\.io\.File\b/i,
-  /java\.io\.FileOutputStream/i,
-  /java\.io\.FileInputStream/i,
-  /java\.io\.RandomAccessFile/i,
-  /java\.nio\.file\./i,
+  /Process\s+/i,
+  /System\s*\.\s*exit/i,
+
+  // Reflection & dynamic class loading (bypass blocklists)
+  /java\s*\.\s*lang\s*\.\s*reflect/i,
+  /\.getClass\s*\(\s*\)/i,
+  /Class\s*\.\s*forName/i,
+  /\.getDeclaredMethod/i,
+  /\.getMethod\s*\(/i,
+  /\.getDeclaredField/i,
+  /\.getDeclaredConstructor/i,
+  /\.newInstance\s*\(/i,
+  /java\s*\.\s*lang\s*\.\s*invoke/i,
+  /MethodHandle/i,
+  /MethodType/i,
+  /VarHandle/i,
+  /Lookup\s*\.\s*find/i,
+
+  // Network access
+  /java\s*\.\s*net\s*\./i,
+  /javax\s*\.\s*net/i,
+  /HttpClient/i,
+  /HttpURLConnection/i,
+  /ServerSocket/i,
+  /DatagramSocket/i,
+  /URL\s*\(/i,
+  /URI\s*\.\s*create/i,
+
+  // File system access
+  /java\s*\.\s*io\s*\.\s*File\b/i,
+  /java\s*\.\s*io\s*\.\s*FileOutputStream/i,
+  /java\s*\.\s*io\s*\.\s*FileInputStream/i,
+  /java\s*\.\s*io\s*\.\s*FileReader/i,
+  /java\s*\.\s*io\s*\.\s*FileWriter/i,
+  /java\s*\.\s*io\s*\.\s*RandomAccessFile/i,
+  /java\s*\.\s*io\s*\.\s*PrintWriter/i,
+  /java\s*\.\s*nio\s*\.\s*file/i,
+  /java\s*\.\s*nio\s*\.\s*channels/i,
+  /Scanner\s*\(\s*new/i,
+
+  // Class loaders
   /ClassLoader/i,
-  /sun\.misc\.Unsafe/i,
-  /System\.loadLibrary/i,
-  /System\.load\(/i,
-  /Thread\.sleep/i,
-  /ForkJoinPool/i
+  /URLClassLoader/i,
+  /ServiceLoader/i,
+
+  // Unsafe / native
+  /sun\s*\.\s*misc\s*\.\s*Unsafe/i,
+  /jdk\s*\.\s*internal/i,
+  /System\s*\.\s*loadLibrary/i,
+  /System\s*\.\s*load\s*\(/i,
+  /native\s+\w+\s*\(/i,
+
+  // Scripting engines
+  /javax\s*\.\s*script/i,
+  /ScriptEngine/i,
+  /Nashorn/i,
+  /GraalVM/i,
+
+  // Threading (prevent resource abuse)
+  /Thread\s*\.\s*sleep/i,
+  /ForkJoinPool/i,
+  /ExecutorService/i,
+  /Executors\s*\./i,
+  /new\s+Thread/i,
+  /CompletableFuture/i,
+  /ThreadPoolExecutor/i,
+
+  // Desktop / GUI
+  /java\s*\.\s*awt/i,
+  /javax\s*\.\s*swing/i,
+  /Desktop\s*\.\s*getDesktop/i,
+
+  // Security manager tampering
+  /SecurityManager/i,
+  /System\s*\.\s*setSecurityManager/i,
+  /AccessController/i,
+  /PrivilegedAction/i,
+
+  // Environment / properties leak
+  /System\s*\.\s*getenv/i,
+  /System\s*\.\s*getProperty/i,
+  /System\s*\.\s*setProperty/i,
+
+  // Unicode escape obfuscation detection
+  /\\u00[0-9a-fA-F]{2}/,
+
+  // Serialization attacks
+  /ObjectInputStream/i,
+  /ObjectOutputStream/i,
+
+  // JMX / management
+  /java\s*\.\s*management/i,
+  /ManagementFactory/i,
+  /javax\s*\.\s*management/i,
 ];
 
 export function validateCodeSafety(code) {
@@ -115,6 +202,7 @@ export async function runJavaSandbox({ code, testCases = [], problemMeta = {} })
           "-Xms32m",
           "-XX:+UseSerialGC",
           "-Dfile.encoding=UTF-8",
+          "-XX:-UsePerfData",
           "TestRunner"
         ],
         {

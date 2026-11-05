@@ -1,7 +1,10 @@
-﻿import { runJavaSandbox } from "../services/sandbox.js";
+import { runJavaSandbox } from "../services/sandbox.js";
 import { analyzeJavaCode } from "../services/analyzer.js";
 import { recommendCollections } from "../services/recommender.js";
 import { PROBLEMS_DATA } from "../data/problemsData.js";
+
+// Maximum allowed code size (50KB)
+const MAX_CODE_SIZE = 50 * 1024;
 
 export async function runCode(req, res) {
   try {
@@ -9,6 +12,10 @@ export async function runCode(req, res) {
 
     if (!code) {
       return res.status(400).json({ error: "Java code is required." });
+    }
+
+    if (code.length > MAX_CODE_SIZE) {
+      return res.status(400).json({ error: "Code exceeds maximum allowed size (50KB)." });
     }
 
     const problem = PROBLEMS_DATA.find(p => p.slug === slug);
@@ -43,9 +50,10 @@ export async function runCode(req, res) {
       collectionRecommendations
     });
   } catch (err) {
+    console.error("[EXEC] Run error:", err.message);
     res.status(500).json({
       status: "EXECUTION_ERROR",
-      error: "Execution server error: " + err.message
+      error: "Code execution failed. Please try again."
     });
   }
 }
@@ -56,6 +64,10 @@ export async function submitCode(req, res) {
 
     if (!code) {
       return res.status(400).json({ error: "Java code is required." });
+    }
+
+    if (code.length > MAX_CODE_SIZE) {
+      return res.status(400).json({ error: "Code exceeds maximum allowed size (50KB)." });
     }
 
     const problem = PROBLEMS_DATA.find(p => p.slug === slug);
@@ -100,9 +112,10 @@ export async function submitCode(req, res) {
       optimalApproach: problem?.approaches?.find(a => a.name.includes("Optimal")) || null
     });
   } catch (err) {
+    console.error("[EXEC] Submit error:", err.message);
     res.status(500).json({
       status: "SUBMISSION_ERROR",
-      error: "Submission server error: " + err.message
+      error: "Code submission failed. Please try again."
     });
   }
 }
